@@ -88,10 +88,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard_buttons: List[List[InlineKeyboardButton]] = []
     
     keyboard_buttons.append([
-        InlineKeyboardButton(
-            "📖 ʜᴇʟᴘ",
-            callback_data="help_menu"
-        )
+        InlineKeyboardButton("📖 ʜᴇʟᴘ", callback_data="help_menu")
     ])
     
     if BOT_USERNAME:
@@ -201,18 +198,11 @@ async def help_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
             InlineKeyboardButton("🔙 ʙᴀᴄᴋ", callback_data="start_back")
         ]]
         
-        try:
-            await query.edit_message_text(
-                help_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode=ParseMode.HTML
-            )
-        except Exception as e:
-            await query.message.reply_text(
-                help_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode=ParseMode.HTML
-            )
+        await query.edit_message_text(
+            help_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode=ParseMode.HTML
+        )
             
     elif query.data == "start_back":
         await start_callback_handler(update, context)
@@ -264,14 +254,11 @@ async def start_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
             )
         ])
     
-    try:
-        await query.edit_message_text(
-            welcome_text,
-            reply_markup=InlineKeyboardMarkup(keyboard_buttons),
-            parse_mode=ParseMode.HTML
-        )
-    except Exception as e:
-        LOGGER.error(f"Failed to edit back to start: {e}")
+    await query.edit_message_text(
+        welcome_text,
+        reply_markup=InlineKeyboardMarkup(keyboard_buttons),
+        parse_mode=ParseMode.HTML
+    )
 
 
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
