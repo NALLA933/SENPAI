@@ -37,7 +37,7 @@ class Config:
     # Media
     VIDEO_URL: List[str] = [
         url.strip()
-        for url in os.getenv("VIDEO_URL", "").split(",")
+        for url in os.getenv("VIDEO_URL", "https://files.catbox.moe/lrjr1o.mp4,https://files.catbox.moe/xdmuzm.mp4").split(",")
         if url.strip()
     ]
 
