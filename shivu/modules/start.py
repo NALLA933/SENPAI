@@ -93,7 +93,6 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     welcome_text = (
         f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
         f"{to_small_caps(tagline)}\n\n"
-        f"<i>{to_small_caps('Use /help to see all available commands')}</i>"
     )
     
     # Build keyboard
