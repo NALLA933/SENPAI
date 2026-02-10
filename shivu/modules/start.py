@@ -1,8 +1,3 @@
-"""
-Start Module with Video Support
-Handles start command with random welcome video from VIDEO_URL list.
-"""
-
 import asyncio
 import random
 from html import escape
