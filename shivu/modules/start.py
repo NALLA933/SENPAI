@@ -3,6 +3,8 @@ Start Module
 Handles start command and user registration.
 """
 
+import random
+import re
 from html import escape
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -10,6 +12,18 @@ from telegram.ext import CommandHandler, ContextTypes
 
 from shivu import application, user_collection, pm_users, LOGGER, SUPPORT_CHAT, UPDATE_CHAT, BOT_USERNAME, VIDEO_URL
 from shivu.utils import to_small_caps
+
+
+def clean_video_url(url: str) -> str:
+    """Clean URL by removing quotes and extra whitespace."""
+    if not url:
+        return ""
+    # Remove surrounding quotes (single or double) and whitespace
+    url = url.strip().strip('"').strip("'")
+    # Basic URL validation
+    if url.startswith(('http://', 'https://')):
+        return url
+    return ""
 
 
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,30 +106,43 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Send welcome message (Video + Caption or Text only)
     if update.message:
-        try:
-            if VIDEO_URL:
-                # Send video with caption
-                await update.message.reply_video(
-                    video=VIDEO_URL,
-                    caption=message,
-                    reply_markup=markup,
-                    parse_mode='HTML'
-                )
-            else:
-                # Send text only if no video URL configured
+        video_sent = False
+        
+        # Process video URLs
+        if VIDEO_URL and isinstance(VIDEO_URL, list):
+            # Clean and filter valid URLs
+            valid_urls = [clean_video_url(url) for url in VIDEO_URL if clean_video_url(url)]
+            
+            if valid_urls:
+                selected_video = random.choice(valid_urls)
+                LOGGER.info(f"Attempting to send video: {selected_video}")
+                
+                try:
+                    await update.message.reply_video(
+                        video=selected_video,
+                        caption=message,
+                        reply_markup=markup,
+                        parse_mode='HTML',
+                        # Disable notification to avoid spam
+                        disable_notification=True
+                    )
+                    video_sent = True
+                    LOGGER.info(f"Video sent successfully to user {user_id}")
+                    
+                except Exception as e:
+                    LOGGER.error(f"Failed to send video URL {selected_video}: {e}")
+                    LOGGER.info("Falling back to text message")
+        
+        # Send text only if video failed or no valid URLs
+        if not video_sent:
+            try:
                 await update.message.reply_text(
                     message, 
                     reply_markup=markup, 
                     parse_mode='HTML'
                 )
-        except Exception as e:
-            LOGGER.error(f"Error sending start message: {e}")
-            # Fallback to text message if video fails
-            await update.message.reply_text(
-                message, 
-                reply_markup=markup, 
-                parse_mode='HTML'
-            )
+            except Exception as e:
+                LOGGER.error(f"Error sending text message: {e}")
 
 
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
