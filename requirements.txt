@@ -1,11 +1,22 @@
-python-telegram-bot==22.5
-pyrogram==2.0.106
-TgCrypto==1.2.5
-motor==3.7.1
-pymongo==4.16.0
-aiohttp==3.13.3
-requests==2.32.5
-python-dotenv==1.2.1
-APScheduler==3.11.2
-cachetools==6.2.4
-Pillow==11.1.0
+# Core bot & API frameworks
+python-telegram-bot==22.6          # Latest stable PTB release 0
+pyrogram==2.0.106                  # Latest stable Pyrogram release 1
+TgCrypto==1.2.5                   # Latest stable TgCrypto release (no newer confirmed)
+
+# MongoDB async + core DB
+motor==3.7.1                      # Latest stable async Mongo driver
+pymongo==4.16.0                   # Latest stable PyMongo release
+
+# HTTP + networking
+aiohttp==3.13.3                   # Most stable async HTTP library
+requests==2.32.5                  # Latest stable requests release
+
+# Environment config
+python-dotenv==1.2.1              # Latest stable dotenv package
+
+# Scheduling + caching
+APScheduler==3.11.2               # Latest stable APScheduler release
+cachetools==6.2.4                 # Latest stable cachetools release
+
+# Utilities
+Pillow==11.1.0                    # Latest stable Pillow for image handling
