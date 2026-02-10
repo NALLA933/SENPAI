@@ -7,9 +7,10 @@ Optimized for python-telegram-bot v22.6
 import asyncio
 from html import escape
 from typing import Optional, List
+from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, ContextTypes, filters
+from telegram.ext import CommandHandler, ContextTypes, CallbackQueryHandler, filters
 from telegram.constants import ParseMode
 
 from shivu import (
@@ -95,10 +96,11 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     asyncio.create_task(_register_user(user_id, user.first_name, username))
     
     # Build welcome message with proper formatting
+    tagline = "I am an advanced character collection bot. Guess characters that spawn in your groups and build your ultimate harem!"
+    
     welcome_text = (
         f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
-        f"{to_small_caps('I am an advanced character collection bot. "
-        f"Guess characters that spawn in your groups and build your ultimate harem!')}\n\n"
+        f"{to_small_caps(tagline)}\n\n"
         f"<b>{to_small_caps('🎮 Quick Start:')}</b>\n"
         f"• Add me to a group\n"
         f"• Wait for characters to spawn\n"  
@@ -248,7 +250,7 @@ async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             f"💬 <b>{to_small_caps('Groups:')}</b> <code>{groups:,}</code>\n"
             f"🎭 <b>{to_small_caps('Characters:')}</b> <code>{chars:,}</code>\n"
             f"📦 <b>{to_small_caps('Collected:')}</b> <code>{collected:,}</code>\n\n"
-            f"<i>{to_small_caps(f'Requested by:')} {update.effective_user.first_name}</i>"
+            f"<i>{to_small_caps('Requested by:')} {update.effective_user.first_name}</i>"
         )
         
         # Update cache
@@ -322,6 +324,4 @@ application.add_handler(CommandHandler("help", help_cmd))
 application.add_handler(CommandHandler("stats", stats_cmd))
 
 # Callback handler for start menu buttons
-application.add_handler(
-    CommandHandler("start", start_cmd, filters=filters.ChatType.PRIVATE)
-)
+application.add_handler(CallbackQueryHandler(start_callback_handler, pattern="^(help_menu|start_back)$"))
