@@ -1,3 +1,8 @@
+"""
+Start Module with Video Support
+Handles start command with random welcome video from VIDEO_URL list.
+"""
+
 import asyncio
 import random
 from html import escape
@@ -16,7 +21,7 @@ from shivu import (
     SUPPORT_CHAT, 
     UPDATE_CHAT, 
     BOT_USERNAME,
-    VIDEO_URL  # <-- List import karo
+    VIDEO_URL
 )
 from shivu.utils import to_small_caps
 
@@ -82,11 +87,14 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if VIDEO_URL and len(VIDEO_URL) > 0:
         selected_video = random.choice(VIDEO_URL)
     
-    # Build welcome message
+    # Build welcome message (simplified without Quick Start and Commands)
     tagline = "ɪ ᴀᴍ ᴀɴ ᴀᴅᴠᴀɴᴄᴇᴅ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴄᴏʟʟᴇᴄᴛɪᴏɴ ʙᴏᴛ. ɢᴜᴇꜱꜱ ᴄʜᴀʀᴀᴄᴛᴇʀꜱ ᴛʜᴀᴛ ꜱᴘᴀᴡɴ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘꜱ ᴀɴᴅ ʙᴜɪʟᴅ ʏᴏᴜʀ ᴜʟᴛɪᴍᴀᴛᴇ ʜᴀʀᴇᴍ!"
     
     welcome_text = (
-        f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n)
+        f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
+        f"{to_small_caps(tagline)}\n\n"
+        f"<i>{to_small_caps('Use /help to see all available commands')}</i>"
+    )
     
     # Build keyboard
     keyboard_buttons: List[List[InlineKeyboardButton]] = []
@@ -116,9 +124,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # VIDEO HANDLING
     try:
         if selected_video:
-            # Check if it's a URL (http/catbox/etc) or Telegram file_id
             if selected_video.startswith(('http://', 'https://')):
-                # External URL - use send_video
                 await update.message.reply_video(
                     video=selected_video,
                     caption=welcome_text,
@@ -127,7 +133,6 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     supports_streaming=True
                 )
             else:
-                # Telegram file_id
                 await update.message.reply_video(
                     video=selected_video,
                     caption=welcome_text,
@@ -135,7 +140,6 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     parse_mode=ParseMode.HTML
                 )
         else:
-            # No video - text only
             await update.message.reply_text(
                 welcome_text,
                 reply_markup=reply_markup,
@@ -145,7 +149,6 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             
     except Exception as e:
         LOGGER.error(f"Start video failed: {e}")
-        # Fallback to text
         try:
             await update.message.reply_text(
                 welcome_text,
