@@ -1,0 +1,14 @@
+# Core dependencies
+python-telegram-bot==21.10
+pyrogram==2.0.106
+motor==3.6.0
+pymongo==4.9.2
+TgCrypto==1.2.5
+aiohttp==3.11.11
+python-dotenv==1.0.1
+
+# Additional utilities
+Pillow==11.1.0
+
+# Note: For Pyrogram, you may need to install additional dependencies:
+# pip install pyrogram tgcrypto
