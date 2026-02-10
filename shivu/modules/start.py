@@ -86,17 +86,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     tagline = "ɪ ᴀᴍ ᴀɴ ᴀᴅᴠᴀɴᴄᴇᴅ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴄᴏʟʟᴇᴄᴛɪᴏɴ ʙᴏᴛ. ɢᴜᴇꜱꜱ ᴄʜᴀʀᴀᴄᴛᴇʀꜱ ᴛʜᴀᴛ ꜱᴘᴀᴡɴ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘꜱ ᴀɴᴅ ʙᴜɪʟᴅ ʏᴏᴜʀ ᴜʟᴛɪᴍᴀᴛᴇ ʜᴀʀᴇᴍ!"
     
     welcome_text = (
-        f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
-        f"{to_small_caps(tagline)}\n\n"
-        f"<b>{to_small_caps('🎮 Quick Start:')}</b>\n"
-        f"• Add me to a group\n"
-        f"• Wait for characters to spawn\n"  
-        f"• Use /guess to claim them!\n\n"
-        f"<b>{to_small_caps('📚 Essential Commands:')}</b>\n"
-        f"• /guess — {to_small_caps('Guess character')}\n"
-        f"• /harem — {to_small_caps('Your collection')}\n"
-        f"• /balance — {to_small_caps('Check coins')}"
-    )
+        f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n)
     
     # Build keyboard
     keyboard_buttons: List[List[InlineKeyboardButton]] = []
