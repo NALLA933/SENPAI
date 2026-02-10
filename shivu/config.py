@@ -1,0 +1,109 @@
+import os
+import sys
+from typing import List
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Config:
+    """Base configuration class for the Telegram bot."""
+
+    # Logging
+    LOGGER: bool = True
+
+    # Bot Credentials (from BotFather)
+    TOKEN: str = os.getenv("BOT_TOKEN", "")
+    BOT_USERNAME: str = os.getenv("BOT_USERNAME", "")
+
+    # Telegram API Credentials (from my.telegram.org/apps)
+    API_ID: int = int(os.getenv("API_ID", "0"))
+    API_HASH: str = os.getenv("API_HASH", "")
+
+    # Owner and Sudo Users
+    OWNER_ID: int = int(os.getenv("OWNER_ID", "0"))
+    SUDO_USERS: List[int] = [
+        int(user_id.strip())
+        for user_id in os.getenv("SUDO_USERS", "").split(",")
+        if user_id.strip().isdigit()
+    ]
+
+    # Group and Channel IDs
+    GROUP_ID: int = int(os.getenv("GROUP_ID", "0"))
+    CHARA_CHANNEL_ID: int = int(os.getenv("CHARA_CHANNEL_ID", "0"))
+
+    # Database
+    MONGO_URL: str = os.getenv("MONGO_URL", "")
+
+    # Media
+    VIDEO_URL: List[str] = [
+        url.strip()
+        for url in os.getenv("VIDEO_URL", "").split(",")
+        if url.strip()
+    ]
+
+    # Community Links
+    SUPPORT_CHAT: str = os.getenv("SUPPORT_CHAT", "")
+    UPDATE_CHAT: str = os.getenv("UPDATE_CHAT", "")
+
+    # External API Keys
+    IMGBB_API_KEY: str = os.getenv("IMGBB_API_KEY", "")
+
+    # Backup Configuration
+    BACKUP_CHAT_ID: int = int(os.getenv("BACKUP_CHAT_ID", "0"))
+
+    # Claim System
+    ALLOWED_GROUP_ID: int = int(os.getenv("ALLOWED_GROUP_ID", "0"))
+    SUPPORT_GROUP_ID: int = int(os.getenv("SUPPORT_GROUP_ID", "0"))
+    SUPPORT_CHANNEL_ID: int = int(os.getenv("SUPPORT_CHANNEL_ID", "0"))
+
+    @classmethod
+    def validate(cls) -> None:
+        """Validate critical configuration values."""
+        errors = []
+
+        if not cls.TOKEN:
+            errors.append("BOT_TOKEN is required")
+
+        if not cls.API_ID or cls.API_ID == 0:
+            errors.append("API_ID is required")
+
+        if not cls.API_HASH:
+            errors.append("API_HASH is required")
+
+        if not cls.OWNER_ID or cls.OWNER_ID == 0:
+            errors.append("OWNER_ID is required")
+
+        if not cls.MONGO_URL:
+            errors.append("MONGO_URL is required")
+
+        if not cls.GROUP_ID or cls.GROUP_ID == 0:
+            errors.append("GROUP_ID is required")
+
+        if not cls.CHARA_CHANNEL_ID or cls.CHARA_CHANNEL_ID == 0:
+            errors.append("CHARA_CHANNEL_ID is required")
+
+        if errors:
+            print("❌ Configuration Error(s):")
+            for error in errors:
+                print(f"   - {error}")
+            print("\n💡 Please set the required environment variables and try again.")
+            print("📝 Copy .env.example to .env and fill in your values.")
+            sys.exit(1)
+
+        # Add OWNER_ID to SUDO_USERS if not already present
+        if cls.OWNER_ID not in cls.SUDO_USERS:
+            cls.SUDO_USERS.append(cls.OWNER_ID)
+
+
+class Production(Config):
+    """Production environment configuration."""
+    LOGGER: bool = True
+
+
+class Development(Config):
+    """Development environment configuration."""
+    LOGGER: bool = True
+
+
+# Auto-validate configuration on import
+Config.validate()
