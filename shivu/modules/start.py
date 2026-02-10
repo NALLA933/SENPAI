@@ -83,7 +83,8 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         selected_video = random.choice(VIDEO_URL)
     
     # Build welcome message
-    tagline = "Guess characters that spawn in your groups and build your ultimate harem!"
+    tagline = "
+ɪ ᴀᴍ ᴀɴ ᴀᴅᴠᴀɴᴄᴇᴅ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴄᴏʟʟᴇᴄᴛɪᴏɴ ʙᴏᴛ. ɢᴜᴇꜱꜱ ᴄʜᴀʀᴀᴄᴛᴇʀꜱ ᴛʜᴀᴛ ꜱᴘᴀᴡɴ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘꜱ ᴀɴᴅ ʙᴜɪʟᴅ ʏᴏᴜʀ ᴜʟᴛɪᴍᴀᴛᴇ ʜᴀʀᴇᴍ!"
     
     welcome_text = (
         f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
