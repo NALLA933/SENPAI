@@ -1,296 +1,158 @@
-import asyncio
-import random
+"""
+Start Module
+Handles start command and user registration.
+"""
+
 from html import escape
-from typing import Optional, List
-from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, ContextTypes, CallbackQueryHandler
-from telegram.constants import ParseMode
+from telegram.ext import CommandHandler, ContextTypes
 
-from shivu import (
-    application, 
-    user_collection, 
-    pm_users, 
-    LOGGER, 
-    SUPPORT_CHAT, 
-    UPDATE_CHAT, 
-    BOT_USERNAME,
-    VIDEO_URL
-)
+from shivu import application, user_collection, pm_users, LOGGER, SUPPORT_CHAT, UPDATE_CHAT, BOT_USERNAME, VIDEO_URL
 from shivu.utils import to_small_caps
 
-_stats_cache: dict = {}
-_stats_lock = asyncio.Lock()
 
+async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/start - Start the bot and show welcome message."""
+    user_id = update.effective_user.id
+    first_name = escape(update.effective_user.first_name)
 
-async def _register_user(
-    user_id: int, 
-    first_name: str, 
-    username: Optional[str]
-) -> None:
+    # Register user in PM users if in private chat
+    if update.effective_chat.type == 'private':
+        try:
+            await pm_users.update_one(
+                {'user_id': user_id},
+                {
+                    '$set': {
+                        'user_id': user_id,
+                        'first_name': update.effective_user.first_name,
+                        'username': getattr(update.effective_user, 'username', None)
+                    }
+                },
+                upsert=True
+            )
+        except Exception as e:
+            LOGGER.error(f"Error registering PM user: {e}")
+
+    # Ensure user exists in user_collection
     try:
-        await pm_users.update_one(
-            {'user_id': user_id},
-            {
-                '$set': {
-                    'user_id': user_id,
-                    'first_name': first_name,
-                    'username': username,
-                    'last_seen': datetime.utcnow()
-                }
-            },
-            upsert=True
-        )
-        
         await user_collection.update_one(
             {'id': user_id},
             {
                 '$setOnInsert': {
                     'id': user_id,
-                    'first_name': first_name,
-                    'username': username,
+                    'first_name': update.effective_user.first_name,
+                    'username': getattr(update.effective_user, 'username', None),
                     'characters': [],
                     'balance': 0,
-                    'favorites': [],
-                    'joined': datetime.utcnow()
+                    'favorites': []
                 }
             },
             upsert=True
         )
     except Exception as e:
-        LOGGER.error(f"User registration failed for {user_id}: {e}", exc_info=True)
+        LOGGER.error(f"Error ensuring user in collection: {e}")
 
-
-async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.effective_user or not update.message:
-        return
-    
-    user = update.effective_user
-    user_id = user.id
-    first_name = escape(user.first_name)
-    
-    username = getattr(user, 'username', None)
-    asyncio.create_task(_register_user(user_id, user.first_name, username))
-    
-    selected_video = None
-    if VIDEO_URL and len(VIDEO_URL) > 0:
-        selected_video = random.choice(VIDEO_URL)
-    
-    tagline = "Guess characters that spawn in your groups and build your ultimate harem!"
-    
-    welcome_text = (
+    # Build welcome message
+    message = (
         f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
-        f"{to_small_caps(tagline)}\n\n"
-        f"<i>{to_small_caps('Click the button below to see all commands')}</i>"
+        f"{to_small_caps('I am a character collection bot. Guess characters that appear in your group chats and add them to your harem!')}\n\n"
+        f"<b>{to_small_caps('📚 Commands:')}</b>\n"
+        f"• /guess - {to_small_caps('Guess the character name')}\n"
+        f"• /harem - {to_small_caps('View your collection')}\n"
+        f"• /balance - {to_small_caps('Check your coin balance')}\n"
+        f"• /shop - {to_small_caps('Buy characters with coins')}\n"
+        f"• /leaderboard - {to_small_caps('View top collectors')}\n"
+        f"• /search - {to_small_caps('Search for characters')}\n\n"
+        f"{to_small_caps('Add me to your group and start collecting!')}"
     )
-    
-    keyboard_buttons: List[List[InlineKeyboardButton]] = []
-    
-    keyboard_buttons.append([
-        InlineKeyboardButton("📖 ʜᴇʟᴘ", callback_data="help_menu")
-    ])
-    
-    if BOT_USERNAME:
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                to_small_caps("➕ Add to Group"),
-                url=f"https://t.me/{BOT_USERNAME.lstrip('@')}?startgroup=true"
-            )
-        ])
-    
+
+    # Build keyboard
+    keyboard = []
+
     if SUPPORT_CHAT:
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                to_small_caps("💬 Support"),
-                url=f"https://t.me/{SUPPORT_CHAT.lstrip('@')}"
-            ),
-            InlineKeyboardButton(
-                to_small_caps("📢 Updates"),
-                url=f"https://t.me/{UPDATE_CHAT.lstrip('@')}"
-            )
-        ])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard_buttons) if keyboard_buttons else None
-    
-    try:
-        if selected_video:
-            if selected_video.startswith(('http://', 'https://')):
+        keyboard.append([InlineKeyboardButton(
+            to_small_caps("💬 Support Group"),
+            url=f"https://t.me/{SUPPORT_CHAT}"
+        )])
+
+    if UPDATE_CHAT:
+        keyboard.append([InlineKeyboardButton(
+            to_small_caps("📢 Updates Channel"),
+            url=f"https://t.me/{UPDATE_CHAT}"
+        )])
+
+    if BOT_USERNAME:
+        keyboard.append([InlineKeyboardButton(
+            to_small_caps("➕ Add to Group"),
+            url=f"https://t.me/{BOT_USERNAME}?startgroup=true"
+        )])
+
+    markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+
+    # Send welcome message (Video + Caption or Text only)
+    if update.message:
+        try:
+            if VIDEO_URL:
+                # Send video with caption
                 await update.message.reply_video(
-                    video=selected_video,
-                    caption=welcome_text,
-                    reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML,
-                    supports_streaming=True
+                    video=VIDEO_URL,
+                    caption=message,
+                    reply_markup=markup,
+                    parse_mode='HTML'
                 )
             else:
-                await update.message.reply_video(
-                    video=selected_video,
-                    caption=welcome_text,
-                    reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML
+                # Send text only if no video URL configured
+                await update.message.reply_text(
+                    message, 
+                    reply_markup=markup, 
+                    parse_mode='HTML'
                 )
-        else:
+        except Exception as e:
+            LOGGER.error(f"Error sending start message: {e}")
+            # Fallback to text message if video fails
             await update.message.reply_text(
-                welcome_text,
-                reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                message, 
+                reply_markup=markup, 
+                parse_mode='HTML'
             )
-            
-    except Exception as e:
-        LOGGER.error(f"Start video failed: {e}")
-        try:
-            await update.message.reply_text(
-                welcome_text,
-                reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML
-            )
-        except Exception:
-            pass
 
 
-async def help_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if not query or not query.data:
-        return
-    
-    await query.answer()
-    
-    if query.data == "help_menu":
-        help_text = (
-            "✦ ɢᴜɪᴅᴀɴᴄᴇ ғʀᴏᴍ sᴇɴᴘᴀɪ ✦\n\n"
-            "✦ ── 『 ʜᴀʀᴇᴍ ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ 』 ── ✦\n\n"
-            "/guess  \n"
-            "↳ ɢᴜᴇss ᴛʜᴇ ᴄʜᴀʀᴀᴄᴛᴇʀ  \n\n"
-            "/bal  \n"
-            "↳ ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ʙᴀʟᴀɴᴄᴇ  \n\n"
-            "/fav  \n"
-            "↳ ᴀᴅᴅ ᴀ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴛᴏ ғᴀᴠᴏʀɪᴛᴇs  \n\n"
-            "/collection  \n"
-            "↳ ᴠɪᴇᴡ ʏᴏᴜʀ ʜᴀʀᴇᴍ ᴄᴏʟʟᴇᴄᴛɪᴏɴ  \n\n"
-            "/leaderboard  \n"
-            "↳ ᴄʜᴇᴄᴋ ᴛʜᴇ ᴛᴏᴘ ᴜsᴇʀ ʟɪsᴛ  \n\n"
-            "/gift  \n"
-            "↳ ɢɪғᴛ ᴀ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴛᴏ ᴀɴᴏᴛʜᴇʀ ᴜsᴇʀ  \n\n"
-            "/trade  \n"
-            "↳ ᴛʀᴀᴅᴇ ᴀ ᴄʜᴀʀᴀᴄᴛᴇʀ ᴡɪᴛʜ ᴀɴᴏᴛʜᴇʀ ᴜsᴇʀ  \n\n"
-            "/shop  \n"
-            "↳ ᴏᴘᴇɴ ᴛʜᴇ sʜᴏᴘ  \n\n"
-            "/smode  \n"
-            "↳ ᴄʜᴀɴɢᴇ ʜᴀʀᴇᴍ ᴍᴏᴅᴇ  \n\n"
-            "/s  \n"
-            "↳ ᴠɪᴇᴡ ᴄʜᴀʀᴀᴄᴛᴇʀ ғʀᴏᴍ ᴡᴀɪғᴜ ɪᴅ  \n\n"
-            "/find  \n"
-            "↳ ғɪɴᴅ ʜᴏᴡ ᴍᴀɴʏ ᴄʜᴀʀᴀᴄᴛᴇʀs ᴇxɪsᴛ ᴡɪᴛʜ ᴀ ɴᴀᴍᴇ  \n\n"
-            "/redeem  \n"
-            "↳ ʀᴇᴅᴇᴇᴍ ᴄʜᴀʀᴀᴄᴛᴇʀs ᴀɴᴅ ᴄᴏɪɴs  \n\n"
-            "/sclaim  \n"
-            "↳ ᴄʟᴀɪᴍ ʏᴏᴜʀ ᴅᴀɪʟʏ ᴡᴀɪғᴜ  \n\n"
-            "/claim  \n"
-            "↳ ᴄʟᴀɪᴍ ʏᴏᴜʀ ᴅᴀɪʟʏ ᴄᴏᴜɴᴛ  \n\n"
-            "/pay  \n"
-            "↳ sᴇɴᴅ ᴄᴏɪɴs ᴛᴏ ᴀɴᴏᴛʜᴇʀ ᴜsᴇʀ  \n\n"
-            "✦ ───────────────── ✦"
-        )
-        
-        keyboard = [[
-            InlineKeyboardButton("🔙 ʙᴀᴄᴋ", callback_data="start_back")
-        ]]
-        
-        await query.edit_message_text(
-            help_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.HTML
-        )
-            
-    elif query.data == "start_back":
-        await start_callback_handler(update, context)
+async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/stats - Show bot statistics."""
+    from shivu import collection, user_collection, top_global_groups_collection
 
-
-async def start_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if not query:
-        return
-    
-    await query.answer()
-    
-    user = update.effective_user
-    if not user:
-        return
-    
-    first_name = escape(user.first_name)
-    tagline = "Guess characters that spawn in your groups and build your ultimate harem!"
-    
-    welcome_text = (
-        f"<b>👋 {to_small_caps('Welcome')}, {first_name}!</b>\n\n"
-        f"{to_small_caps(tagline)}\n\n"
-        f"<i>{to_small_caps('Click the button below to see all commands')}</i>"
-    )
-    
-    keyboard_buttons: List[List[InlineKeyboardButton]] = []
-    
-    keyboard_buttons.append([
-        InlineKeyboardButton("📖 ʜᴇʟᴘ", callback_data="help_menu")
-    ])
-    
-    if BOT_USERNAME:
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                to_small_caps("➕ Add to Group"),
-                url=f"https://t.me/{BOT_USERNAME.lstrip('@')}?startgroup=true"
-            )
-        ])
-    
-    if SUPPORT_CHAT:
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                to_small_caps("💬 Support"),
-                url=f"https://t.me/{SUPPORT_CHAT.lstrip('@')}"
-            ),
-            InlineKeyboardButton(
-                to_small_caps("📢 Updates"),
-                url=f"https://t.me/{UPDATE_CHAT.lstrip('@')}"
-            )
-        ])
-    
-    await query.edit_message_text(
-        welcome_text,
-        reply_markup=InlineKeyboardMarkup(keyboard_buttons),
-        parse_mode=ParseMode.HTML
-    )
-
-
-async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message:
-        return
-    
     try:
-        from shivu import collection, top_global_groups_collection
-        
-        users = await user_collection.count_documents({})
-        chars = await collection.count_documents({})
-        groups = await top_global_groups_collection.count_documents({})
-        
-        stats_text = (
+        # Get counts
+        total_characters = await collection.count_documents({})
+        total_users = await user_collection.count_documents({})
+        total_groups = await top_global_groups_collection.count_documents({})
+
+        # Get total collected characters
+        pipeline = [
+            {"$match": {"characters": {"$exists": True}}},
+            {"$project": {"count": {"$size": {"$ifNull": ["$characters", []]}}}},
+            {"$group": {"_id": None, "total": {"$sum": "$count"}}}
+        ]
+
+        result = await user_collection.aggregate(pipeline).to_list(1)
+        total_collected = result[0]['total'] if result else 0
+
+        message = (
             f"<b>{to_small_caps('📊 Bot Statistics')}</b>\n\n"
-            f"👥 <b>{to_small_caps('Users:')}</b> <code>{users:,}</code>\n"
-            f"💬 <b>{to_small_caps('Groups:')}</b> <code>{groups:,}</code>\n"
-            f"🎭 <b>{to_small_caps('Characters:')}</b> <code>{chars:,}</code>"
+            f"👥 {to_small_caps('Total Users:')} {total_users:,}\n"
+            f"👥 {to_small_caps('Total Groups:')} {total_groups:,}\n"
+            f"🎭 {to_small_caps('Total Characters:')} {total_characters:,}\n"
+            f"📦 {to_small_caps('Total Collected:')} {total_collected:,}\n"
         )
-        
-        await update.message.reply_text(stats_text, parse_mode=ParseMode.HTML)
-        
+
+        await update.message.reply_text(message, parse_mode='HTML')
+
     except Exception as e:
-        LOGGER.error(f"Stats error: {e}")
-        await update.message.reply_text(
-            to_small_caps("❌ Error fetching statistics."),
-            parse_mode=ParseMode.HTML
-        )
+        LOGGER.error(f"Error getting stats: {e}")
+        await update.message.reply_text(to_small_caps("❌ Error fetching statistics."))
 
 
-application.add_handler(CommandHandler("start", start_cmd))
-application.add_handler(CommandHandler("stats", stats_cmd))
-
-application.add_handler(CallbackQueryHandler(help_callback_handler, pattern="^help_menu$"))
-application.add_handler(CallbackQueryHandler(start_callback_handler, pattern="^start_back$"))
+# Register handlers
+application.add_handler(CommandHandler("start", start_cmd, block=False))
+application.add_handler(CommandHandler("stats", stats_cmd, block=False))
